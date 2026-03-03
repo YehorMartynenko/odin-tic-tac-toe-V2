@@ -69,9 +69,12 @@ const GameController = (function(playerOneName = "Player One", playerTwoName = "
     }];
 
     let activePlayer = players[0];
-
     const changeActivePlayer = () => {
         return activePlayer === players[0] ? players[1] : players[0];
+    }
+
+    const getActivePlayerName = () => {
+        return activePlayer.name;
     }
 
 
@@ -81,19 +84,25 @@ const GameController = (function(playerOneName = "Player One", playerTwoName = "
         isSucces = Gameboard.placeMark(row, col, activePlayer.mark);
         if(!isSucces){
             console.log(`Please make sure your coordinates are in [0,2] range and selected cell is empty`);
-            return;
+            return {status: "error", message: "Please make sure your coordinates are in [0,2] range and selected cell is empty"};
         }
         Gameboard.getBoardSnapshot();
         if(GameRules.checkWin(Gameboard.getBoardSnapshot())){
             console.log(`${activePlayer.name} won!`);
+            const currActivePlayer = activePlayer;
             activePlayer = players[0];
-            Gameboard.createBoard();
-            return;
+            return {status: "win", message: `${currActivePlayer.name} won!`};
+        }
+        if(GameRules.checkTie(Gameboard.getBoardSnapshot())){
+            console.log("Tie!");
+            return {status: "tie", message: "Tie! Reset board to play once more"};
         }
         activePlayer = changeActivePlayer();
+
+        return {status: "continue", message: `${activePlayer.name}'s turn`};
     }
 
-    return { playRound };
+    return { playRound, getActivePlayerName };
 })();
 
 const GameRules = (function() {
@@ -142,25 +151,58 @@ const GameRules = (function() {
         const isWin = lines.map((line) => line.every((mark, index, arr) => mark === arr[0] && mark !== "")).filter((el) => el === true);
         return isWin.length === 0 ? false : true;
     }
-    return { checkWin };
+
+    const checkTie = (board) => {
+        return board.every(row => !row.includes(""));
+    };
+    return { checkWin, checkTie };
 })();
 
 const ScreenController = (function() {
     const boardDiv = document.querySelector(".board");
-    const boardSnapshot = Gameboard.getBoardSnapshot();
+    const info = document.querySelector(".info");
+    const resetBtn = document.querySelector(".reset");
 
     function drawBoard(){
         boardDiv.textContent = "";
-        boardSnapshot.map((row) => row.map((cell) => {
+        const boardSnapshot = Gameboard.getBoardSnapshot();
+        boardSnapshot.map((row, rowIndex) => row.map((cell, colIndex) => {
             const cellBtn = document.createElement("button");
             cellBtn.classList.add("cell");
+            cellBtn.dataset.row = rowIndex;
+            cellBtn.dataset.col = colIndex;
             cellBtn.textContent = cell;
-            console.log(cell);
             boardDiv.appendChild(cellBtn);
         }));
     }
 
-    return { drawBoard };
+    function updateInfo(message) {
+        info.textContent = message;
+    }
+    function clickHandlerBoard(e){
+        const selectedColumn = e.target.dataset.col
+        const selectedRow = e.target.dataset.row;
+
+        if (selectedColumn === undefined) return;
+
+        const result = GameController.playRound(selectedRow, selectedColumn);
+        drawBoard();
+        updateInfo(result.message);
+        
+        if(result.status === "win" || result.status === "tie"){
+            boardDiv.removeEventListener("click", clickHandlerBoard);
+        }
+    }
+    function clickHandlerReset(){
+        Gameboard.createBoard();
+        ScreenController.drawBoard();
+        boardDiv.addEventListener("click", clickHandlerBoard);
+    }
+
+    boardDiv.addEventListener("click", clickHandlerBoard);
+    resetBtn.addEventListener("click", clickHandlerReset);
+    return { drawBoard, updateInfo };
 })();
 
 ScreenController.drawBoard();
+ScreenController.updateInfo(`${GameController.getActivePlayerName()}'s turn`);
