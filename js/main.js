@@ -49,7 +49,7 @@ const Gameboard = (function() {
             return board[row][col].getValue();
         }
 
-        return {placeMark, getMark};
+        return { placeMark, getMark };
     }
 
     const manager = markManager();
@@ -93,7 +93,7 @@ const GameController = (function(playerOneName = "Player One", playerTwoName = "
         activePlayer = changeActivePlayer();
     }
 
-    return { playRound }
+    return { playRound };
 })();
 
 const GameRules = (function() {
@@ -142,5 +142,25 @@ const GameRules = (function() {
         const isWin = lines.map((line) => line.every((mark, index, arr) => mark === arr[0] && mark !== "")).filter((el) => el === true);
         return isWin.length === 0 ? false : true;
     }
-    return {checkWin}
+    return { checkWin };
 })();
+
+const ScreenController = (function() {
+    const boardDiv = document.querySelector(".board");
+    const boardSnapshot = Gameboard.getBoardSnapshot();
+
+    function drawBoard(){
+        boardDiv.textContent = "";
+        boardSnapshot.map((row) => row.map((cell) => {
+            const cellBtn = document.createElement("button");
+            cellBtn.classList.add("cell");
+            cellBtn.textContent = cell;
+            console.log(cell);
+            boardDiv.appendChild(cellBtn);
+        }));
+    }
+
+    return { drawBoard };
+})();
+
+ScreenController.drawBoard();
